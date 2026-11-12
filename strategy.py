@@ -18,7 +18,9 @@ def signals(panel):
  for sess,ix in d.groupby('session',sort=False).indices.items():
   p=prev_sess.get(sess)
   if p is None or p not in chg.index: continue
-  side=int(np.sign(chg[p]))   # change completed in prior session (known at its close)
+  v=chg[p]
+  if not np.isfinite(v): continue
+  side=int(np.sign(v))   # change completed in prior session (known at its close)
   j=np.where(t[ix]==PARAMS['entry_sec']-60)[0]
   if not side or not len(j): continue
   ref=c[ix[j[0]]]
