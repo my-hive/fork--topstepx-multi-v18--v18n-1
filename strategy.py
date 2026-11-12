@@ -1,27 +1,24 @@
-"""Monday weekend ES gap reversal at cash open.
-Weekend news gap can unwind when institutional cash liquidity arrives Monday.
+"""Thursday EIA gas-storage continuation in QG quarter-size natural gas.
+Gas-storage surprise can require continued commercial hedge adjustment.
 Falsify: nonpositive stressed PnL or fewer than 70 percent positive years.
 """
 import numpy as np
 import pandas as pd
-FAMILY='equity-weekend-gap-reversal'
-PARAMS={'entry_sec':30600,'exit_sec':50400,'stop_pts':4.0}
-def entry_risk(panel): return {s:np.full(len(d),205.) for s,d in panel.items()}
+FAMILY='energy-qg-storage-event-micro'
+PARAMS={'decision_sec':34440,'exit_sec':50400,'stop_pts':.08}
+def entry_risk(panel):return {s:np.full(len(d),205.) for s,d in panel.items()}
 def signals(panel):
  out={s:np.zeros(len(d),dtype=np.int64) for s,d in panel.items()}
  for s,d in panel.items():
-  if s!='ES':continue
-  c=d.close.to_numpy(); t=d.ct_sec.to_numpy(); prev=None
+  if s!='QG':continue
+  c=d.close.to_numpy();t=d.ct_sec.to_numpy()
   for sess,ix in d.groupby('session',sort=False).indices.items():
-   monday=pd.Timestamp(sess).day_of_week==0
-   if monday and prev is not None:
-    j=np.where(t[ix]==PARAMS['entry_sec']-60)[0]
-    # Friday settlement/reopen proxy: prior session final printed close.
-    if len(j):
-     side=-int(np.sign(c[ix[j[0]]]-prev)); ref=c[ix[j[0]]]
-     if side:
-      for r in ix[j[0]+1:]:
-       if t[r]>=PARAMS['exit_sec'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
-       out[s][r]=side
-   prev=c[ix[-1]]
+   if pd.Timestamp(sess).day_of_week!=3:continue
+   a=np.where(t[ix]==34140)[0];b=np.where(t[ix]==PARAMS['decision_sec'])[0]
+   if not len(a) or not len(b):continue
+   side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]));ref=c[ix[b[0]]]
+   if not side:continue
+   for r in ix[b[0]+1:]:
+    if t[r]>=PARAMS['exit_sec'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
+    out[s][r]=side
  return out
