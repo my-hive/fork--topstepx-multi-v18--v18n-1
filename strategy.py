@@ -1,26 +1,19 @@
-"""Tuesday reversal of prior Monday MES session return.
-Monday institutional displacement can partly reverse as active managers rebalance Tuesday.
+"""M6E London-fix inventory reversal.
+09:30-10:00 CT dealer flow into London fix can revert after inventory transfer.
 Falsify: nonpositive stressed PnL or fewer than 70 percent positive years.
 """
 import numpy as np
-import pandas as pd
-FAMILY='equity-tuesday-reversal-micro'
-PARAMS={'size':5,'entry':30600,'exit':50400,'stop_pts':10.}
-def entry_risk(panel):return {s:np.full(len(d),PARAMS['stop_pts']*5*PARAMS['size']+10.) for s,d in panel.items()}
+FAMILY='fx-london-fix-reversal-micro'
+PARAMS={'signal_start':34200,'entry':36000,'exit':39600,'risk_dollars':250.}
+def entry_risk(panel):return {s:np.full(len(d),PARAMS['risk_dollars']) for s,d in panel.items()}
 def signals(panel):
  out={s:np.zeros(len(d),dtype=np.int64) for s,d in panel.items()}
  for s,d in panel.items():
-  if s!='MES':continue
-  c=d.close.to_numpy();t=d.ct_sec.to_numpy();prev=None
-  for sess,ix in d.groupby('session',sort=False).indices.items():
-   day=pd.Timestamp(sess)
-   if day.day_of_week==1 and prev is not None:
-    j=np.where(t[ix]==PARAMS['entry']-60)[0]
-    side=-int(np.sign(prev))
-    if len(j) and side:
-     ref=c[ix[j[0]]]
-     for r in ix[j[0]+1:]:
-      if t[r]>=PARAMS['exit'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
-      out[s][r]=side*PARAMS['size']
-   prev=c[ix[-1]]/c[ix[0]]-1
+  if s!='M6E':continue
+  c=d.close.to_numpy();t=d.ct_sec.to_numpy()
+  for ix in d.groupby('session',sort=False).indices.values():
+   a=np.where(t[ix]==PARAMS['signal_start']-60)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
+   if not len(a) or not len(b):continue
+   side=-int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]))
+   if side:out[s][ix[(t[ix]>=PARAMS['entry'])&(t[ix]<PARAMS['exit'])]]=side
  return out
