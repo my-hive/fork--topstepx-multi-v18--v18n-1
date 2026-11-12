@@ -1,41 +1,40 @@
-"""EIA Wednesday crude inventory-release drift on QM (mini crude, 500 bbl).
-Mechanism: 09:30 CT Wed EIA report; surprise digested over hours (dealer inventory/hedging).
-Signal: sign of 09:30-09:34 CT return, enter 09:35 fill, hold to 14:00 CT, fixed stop.
-Falsify: negative stressed PnL or <70% positive years.
+"""Refined-product lead/lag into mini crude.
+Mechanism: product price discovery transmits to crude hedging through crack spreads.
+Use last completed 30-min RB/HO returns, enter QM next 30-min bar, flat after bar.
+Falsify: stressed PnL <= 0 or positive year fraction < .70.
 """
 import numpy as np
 
-FAMILY = "energy-eia-wed-inventory-drift"
-PARAMS = {'stop_pts': 0.5, 'decision_sec': 34440, 'exit_sec': 50400}
-SYMS = ('QM',)
+FAMILY = "energy-refined-product-leadlag"
+PARAMS = {'bar_sec': 1800, 'start_sec': 32400, 'end_sec': 50400, 'risk_pts': 0.5}
 
 def entry_risk(panel):
-    return {s: np.full(len(df), PARAMS['stop_pts'] * 500 + 5.) for s, df in panel.items()}
+    return {s: np.full(len(d), PARAMS['risk_pts'] * 500 + 5) for s, d in panel.items()}
 
 def signals(panel):
-    res = {}
-    for s, df in panel.items():
-        out = np.zeros(len(df), dtype=np.int64)
-        if s in SYMS:
-            close = df.close.to_numpy(); sec = df.ct_sec.to_numpy()
-            for sess, idx in df.groupby('session', sort=False).indices.items():
-                if pd_dow(sess) != 2:
-                    continue
-                c, t = close[idx], sec[idx]
-                a = np.where(t == 34200 - 60)[0]; b = np.where(t == PARAMS['decision_sec'])[0]
-                if not len(a) or not len(b):
-                    continue
-                d = int(np.sign(c[b[0]] - c[a[0]]))
-                if d == 0:
-                    continue
-                ref = c[b[0]]
-                for j in range(b[0], len(idx)):
-                    if t[j] >= PARAMS['exit_sec'] or (c[j] - ref) * d <= -PARAMS['stop_pts']:
-                        break
-                    out[idx[j]] = d
-        res[s] = out
-    return res
-
-def pd_dow(sess):
-    import pandas as pd
-    return pd.Timestamp(sess).dayofweek
+    out = {s: np.zeros(len(d), dtype=np.int64) for s, d in panel.items()}
+    if not {'QM', 'RB', 'HO'} <= set(panel):
+        return out
+    q, rb, ho = (panel[s] for s in ('QM', 'RB', 'HO'))
+    # Exact common bars only: feature available at completed x:29/x:59 minute.
+    lead = {}
+    for sess, ix in rb.groupby('session', sort=False).indices.items():
+        b = rb.iloc[ix]; h = ho[(ho.session == sess)]
+        if h.empty: continue
+        bp = b.set_index('ct_sec').close; hp = h.set_index('ct_sec').close
+        for sec in range(PARAMS['start_sec'] + 2 * PARAMS['bar_sec'] - 60, PARAMS['end_sec'], PARAMS['bar_sec']):
+            prev = sec - PARAMS['bar_sec']
+            if sec in bp.index and prev in bp.index and sec in hp.index and prev in hp.index:
+                # Percentage makes contracts commensurate; equal product legs.
+                lead[(str(sess), sec)] = np.sign((bp[sec]/bp[prev]-1) + (hp[sec]/hp[prev]-1))
+    for sess, ix in q.groupby('session', sort=False).indices.items():
+        secs = q.ct_sec.to_numpy()[ix]
+        for j, row in enumerate(ix):
+            sec = secs[j]; key = (str(sess), sec - 60)
+            if sec % PARAMS['bar_sec'] == 0 and key in lead:
+                side = int(lead[key])
+                if side:
+                    # Order submitted after previous constituent bar; next open fill.
+                    until = sec + PARAMS['bar_sec']
+                    out['QM'][ix[(secs >= sec) & (secs < until)]] = side
+    return out
