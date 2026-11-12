@@ -11,7 +11,7 @@ def signals(panel):
  for s,d in panel.items():
   if s!='M2K':continue
   c=d.close.to_numpy();t=d.ct_sec.to_numpy()
-  for ix in d.groupby('session',sort=False).indices.items():
+  for _,ix in d.groupby('session',sort=False).indices.items():
    a=np.where(t[ix]==30540)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
    if not len(a) or not len(b):continue
    side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]));ref=c[ix[b[0]]]
