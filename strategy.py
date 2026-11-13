@@ -1,27 +1,25 @@
-"""Causal audit of CL month-boundary refinery and producer hedging flow.
-Known final three/initial three calendar business sessions; prior five fully completed session returns.
-Falsify on causality, stressed era/year failure, or zero primary statistic.
+"""Friday diversified index basket-flow capacity audit.
+Shared Friday MES/MNQ opening flow; one of each actual micro contract, no synthetic scaling.
+Falsify if entry risk, primary, or economics fail.
 """
 import numpy as np
 import pandas as pd
-FAMILY='energy-crude-turn-of-month-causal-audit'
-PARAMS={'trend_sessions':5,'boundary_sessions':3,'entry':28800,'exit':43200,'stop_pts':.15}
-def entry_risk(panel):return {s:np.full(len(d),155.) for s,d in panel.items()}
+FAMILY='equity-friday-opening-flow-portfolio-capacity-audit'
+PARAMS={'entry':32400,'exit':50400,'mnq_stop':100.,'mes_stop':10.}
+def entry_risk(panel):
+ return {s:np.full(len(d),205. if s=='MNQ' else 55. if s=='MES' else 301.) for s,d in panel.items()}
 def signals(panel):
  out={s:np.zeros(len(d),dtype=np.int64) for s,d in panel.items()}
  for s,d in panel.items():
-  if s!='CL':continue
-  c=d.close.to_numpy();t=d.ct_sec.to_numpy();groups=list(d.groupby('session',sort=False).indices.items()); rets=[]
-  # calendar groups use dates alone: future month sessions are never consulted
-  for k,(sess,ix) in enumerate(groups):
-   day=pd.Timestamp(sess); nxt=day+pd.Timedelta(days=1)
-   boundary=day.day<=PARAMS['boundary_sessions'] or nxt.day<=PARAMS['boundary_sessions']
-   if k>=PARAMS['trend_sessions'] and boundary:
-    side=int(np.sign(sum(rets[-PARAMS['trend_sessions']:])));j=np.where(t[ix]==PARAMS['entry']-60)[0]
-    if side and len(j):
-     ref=c[ix[j[0]]]
-     for r in ix[j[0]+1:]:
-      if t[r]>=PARAMS['exit'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
-      out[s][r]=side
-   rets.append(c[ix[-1]]/c[ix[0]]-1)
+  if s not in ('MNQ','MES'):continue
+  c=d.close.to_numpy();t=d.ct_sec.to_numpy();stop=PARAMS['mnq_stop'] if s=='MNQ' else PARAMS['mes_stop']
+  for sess,ix in d.groupby('session',sort=False).indices.items():
+   if pd.Timestamp(sess).day_of_week!=4:continue
+   a=np.where(t[ix]==30540)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
+   if not len(a) or not len(b):continue
+   side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]));ref=c[ix[b[0]]]
+   if side:
+    for r in ix[b[0]+1:]:
+     if t[r]>=PARAMS['exit'] or (c[r]-ref)*side<=-stop:break
+     out[s][r]=side
  return out
