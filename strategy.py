@@ -1,10 +1,10 @@
-"""Thursday MBT cash-open institutional-flow continuation.
-Thursday CME bitcoin positioning and hedge flow can sustain opening imbalance.
+"""Friday MBT pre-weekend positioning-flow continuation.
+Friday CME bitcoin positioning before weekend can sustain opening imbalance.
 Falsify: stressed PnL/eras/year gates fail or primary is zero.
 """
 import numpy as np
 import pandas as pd
-FAMILY='crypto-thursday-opening-imbalance-continuation-micro'
+FAMILY='crypto-friday-opening-imbalance-continuation-micro'
 PARAMS={'entry':32400,'exit':50400,'stop_pts':1500.}
 def entry_risk(panel):return {s:np.full(len(d),155.) for s,d in panel.items()}
 def signals(panel):
@@ -13,7 +13,7 @@ def signals(panel):
   if s!='MBT':continue
   c=d.close.to_numpy();t=d.ct_sec.to_numpy()
   for sess,ix in d.groupby('session',sort=False).indices.items():
-   if pd.Timestamp(sess).day_of_week!=3:continue
+   if pd.Timestamp(sess).day_of_week!=4:continue
    a=np.where(t[ix]==30540)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
    if not len(a) or not len(b):continue
    side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]));ref=c[ix[b[0]]]
