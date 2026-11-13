@@ -15,7 +15,7 @@ def signals(panel):
    a=np.where(t[ix]==30540)[0];b=np.where(t[ix]==32340)[0];j=np.where(t[ix]==PARAMS['entry']-60)[0]
    vol=v[ix][(t[ix]>=32400)&(t[ix]<34200)].sum()
    if len(a) and len(b) and len(j):
-    if len(hist)>=PARAMS['lookback'] and vol>np.median(hist[-PARAMS['lookback']]):
+    if len(hist)>=PARAMS['lookback'] and vol>np.median(hist[-PARAMS['lookback']:]):
      side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]));ref=c[ix[j[0]]]
      if side:
       for r in ix[j[0]+1:]:
