@@ -14,7 +14,7 @@ def signals(panel):
   for _,ix in d.groupby('session',sort=False).indices.items():
    a=np.where(t[ix]==39540)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0];vol=v[ix][(t[ix]>=39600)&(t[ix]<43200)].sum()
    if len(a) and len(b):
-    if len(hist)>=PARAMS['lookback'] and vol>np.median(hist[-PARAMS['lookback']):]):
+    if len(hist)>=PARAMS['lookback'] and vol>np.median(hist[-PARAMS['lookback']:])):
      side=-int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]));ref=c[ix[b[0]]]
      if side:
       for r in ix[b[0]+1:]:
