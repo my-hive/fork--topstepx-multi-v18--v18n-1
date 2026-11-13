@@ -14,7 +14,7 @@ def signals(panel):
   for _,ix in d.groupby('session',sort=False).indices.items():
    current=co[ix[0]];a=np.where(t[ix]==61200)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
    if prior is not None and current!=prior and len(a) and len(b):
-    side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]);ref=c[ix[b[0]]]
+    side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]));ref=c[ix[b[0]]]
     if side:
      for r in ix[b[0]+1:]:
       if t[r]>=PARAMS['exit'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
