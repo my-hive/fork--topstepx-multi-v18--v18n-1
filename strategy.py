@@ -1,24 +1,25 @@
-"""NQ opening trend confirmed by high first-hour cash volume.
-First-hour volume above trailing median identifies institutional ETF/basket participation.
+"""ES month-end allocator-flow trend continuation.
+Known month-end calendar and prior completed five-session ES trend proxy index allocation flow.
 Falsify: stressed PnL, era/year, or primary failure.
 """
 import numpy as np
-FAMILY='equity-nq-firsthour-volume-confirmed-opening-trend'
-PARAMS={'lookback':20,'entry':34200,'exit':50400,'stop_pts':12.}
-def entry_risk(panel):return {s:np.full(len(d),245.) for s,d in panel.items()}
+import pandas as pd
+FAMILY='equity-es-month-end-rebalance-trend'
+PARAMS={'lookback':5,'entry':28800,'exit':43200,'stop_pts':6.}
+def entry_risk(panel):return {s:np.full(len(d),305.) for s,d in panel.items()}
 def signals(panel):
  out={s:np.zeros(len(d),dtype=np.int64) for s,d in panel.items()}
  for s,d in panel.items():
-  if s!='NQ':continue
-  c=d.close.to_numpy();t=d.ct_sec.to_numpy();v=d.volume.to_numpy();hist=[]
-  for _,ix in d.groupby('session',sort=False).indices.items():
-   a=np.where(t[ix]==30540)[0];b=np.where(t[ix]==32340)[0];j=np.where(t[ix]==PARAMS['entry']-60)[0];vol=v[ix][(t[ix]>=30600)&(t[ix]<34200)].sum()
-   if len(a) and len(b) and len(j):
-    if len(hist)>=PARAMS['lookback'] and vol>np.median(hist[-PARAMS['lookback']:]):
-     side=int(np.sign(c[ix[b[0]]]-c[ix[a[0]]]));ref=c[ix[j[0]]]
-     if side:
-      for r in ix[j[0]+1:]:
-       if t[r]>=PARAMS['exit'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
-       out[s][r]=side
-    hist.append(vol)
+  if s!='ES':continue
+  c=d.close.to_numpy();t=d.ct_sec.to_numpy();hist=[]
+  for sess,ix in d.groupby('session',sort=False).indices.items():
+   day=pd.Timestamp(sess);j=np.where(t[ix]==PARAMS['entry']-60)[0]
+   if day.day>=29 and len(hist)>=PARAMS['lookback'] and len(j):
+    side=int(np.sign(sum(hist[-PARAMS['lookback']:])))
+    if side:
+     ref=c[ix[j[0]]]
+     for r in ix[j[0]+1:]:
+      if t[r]>=PARAMS['exit'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
+      out[s][r]=side
+   hist.append(c[ix[-1]]/c[ix[0]]-1)
  return out
