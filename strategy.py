@@ -14,7 +14,7 @@ def signals(panel):
   for _,ix in d.groupby('session',sort=False).indices.items():
    a=np.where(t[ix]==61200)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
    if len(a) and len(b):
-    ret=c[ix[b[0]]]/c[ix[a[0]]-1
+    ret=c[ix[b[0]]]/c[ix[a[0]]]-1
     if len(hist)>=PARAMS['lookback'] and abs(ret)>np.quantile(hist[-PARAMS['lookback']:],PARAMS['quantile']):
      side=int(np.sign(ret));ref=c[ix[b[0]]]
      if side:
