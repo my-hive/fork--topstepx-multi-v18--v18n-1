@@ -1,25 +1,25 @@
-"""CL extreme overnight macro-repricing continuation into US session.
-Top-tail overnight crude repricing can carry information into US physical hedge flows.
+"""GC extreme overnight macro repricing confirmed by overnight volume.
+Extreme repricing with elevated volume can reflect macro hedge flow completed through COMEX.
 Falsify: stressed PnL, era/year, or primary failure.
 """
 import numpy as np
-FAMILY='energy-cl-extreme-overnight-us-continuation'
-PARAMS={'lookback':120,'quantile':.95,'entry':30600,'exit':50400,'stop_pts':.15}
-def entry_risk(panel):return {s:np.full(len(d),155.) for s,d in panel.items()}
+FAMILY='metals-gold-extreme-overnight-volume-confirmation'
+PARAMS={'lookback':120,'quantile':.95,'entry':30600,'exit':50400,'stop_pts':5.}
+def entry_risk(panel):return {s:np.full(len(d),255.) for s,d in panel.items()}
 def signals(panel):
  out={s:np.zeros(len(d),dtype=np.int64) for s,d in panel.items()}
  for s,d in panel.items():
-  if s!='CL':continue
-  c=d.close.to_numpy();t=d.ct_sec.to_numpy();hist=[]
+  if s!='GC':continue
+  c=d.close.to_numpy();t=d.ct_sec.to_numpy();v=d.volume.to_numpy();rh=[];vh=[]
   for _,ix in d.groupby('session',sort=False).indices.items():
-   a=np.where(t[ix]==61200)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
+   a=np.where(t[ix]==61200)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0];vol=v[ix][(t[ix]>=61200)|(t[ix]<30600)].sum()
    if len(a) and len(b):
     ret=c[ix[b[0]]]/c[ix[a[0]]]-1
-    if len(hist)>=PARAMS['lookback'] and abs(ret)>np.quantile(hist[-PARAMS['lookback']:],PARAMS['quantile']):
+    if len(rh)>=PARAMS['lookback'] and abs(ret)>np.quantile(rh[-PARAMS['lookback']:],PARAMS['quantile']) and vol>np.median(vh[-PARAMS['lookback']:]):
      side=int(np.sign(ret));ref=c[ix[b[0]]]
      if side:
       for r in ix[b[0]+1:]:
        if t[r]>=PARAMS['exit'] or (c[r]-ref)*side<=-PARAMS['stop_pts']:break
        out[s][r]=side
-    hist.append(abs(ret))
+    rh.append(abs(ret));vh.append(vol)
  return out
