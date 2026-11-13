@@ -1,15 +1,15 @@
-"""6E extreme overnight macro-repricing continuation into US session.
-Top-tail overnight EURUSD repricing can carry information into US macro hedge flows.
+"""QM extreme overnight macro-repricing continuation into US session.
+Top-tail overnight crude repricing can carry information into US physical hedge flows.
 Falsify: stressed PnL, era/year, or primary failure.
 """
 import numpy as np
-FAMILY='fx-euro-extreme-overnight-us-continuation'
-PARAMS={'lookback':120,'quantile':.95,'entry':30600,'exit':50400,'stop_pts':.002}
-def entry_risk(panel):return {s:np.full(len(d),255.) for s,d in panel.items()}
+FAMILY='energy-qm-extreme-overnight-us-continuation'
+PARAMS={'lookback':120,'quantile':.95,'entry':30600,'exit':50400,'stop_pts':.15}
+def entry_risk(panel):return {s:np.full(len(d),155.) for s,d in panel.items()}
 def signals(panel):
  out={s:np.zeros(len(d),dtype=np.int64) for s,d in panel.items()}
  for s,d in panel.items():
-  if s!='6E':continue
+  if s!='QM':continue
   c=d.close.to_numpy();t=d.ct_sec.to_numpy();hist=[]
   for _,ix in d.groupby('session',sort=False).indices.items():
    a=np.where(t[ix]==61200)[0];b=np.where(t[ix]==PARAMS['entry']-60)[0]
